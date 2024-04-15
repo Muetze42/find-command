@@ -151,7 +151,7 @@ trait FindCommandTrait
                     if (!$input->acceptValue()) {
                         $arguments[$key] = confirm(
                             label: $input->getName(),
-                            default: $input->getDefault(),
+                            default: (bool) $input->getDefault(),
                             required: false,
                             hint: $input->getDescription(),
                         );
@@ -165,7 +165,7 @@ trait FindCommandTrait
                     $arguments[$key] = textarea(
                         label: $input->getName(),
                         placeholder: 'one value in each line',
-                        default: $input->getDefault(),
+                        default: implode(PHP_EOL, array_filter((array) $input->getDefault())),
                         required: $input instanceof InputArgument && $input->isRequired(),
                         hint: $input->getDescription(),
                     );
@@ -178,7 +178,7 @@ trait FindCommandTrait
 
                 $arguments[$key] = text(
                     label: $input->getName(),
-                    default: $input->getDefault(),
+                    default: (string) $input->getDefault(),
                     required: $input instanceof InputArgument && $input->isRequired(),
                     hint: $input->getDescription(),
                 );

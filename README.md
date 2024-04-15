@@ -20,6 +20,12 @@ It uses [Laravel Prompts](https://laravel.com/docs/prompts) under the hoods.
 composer require norman-huth/find-command
 ```
 
+For development and beta versions:
+
+```shell
+composer require norman-huth/find-command:"@dev"
+```
+
 ### Usage
 
 #### Laravel
