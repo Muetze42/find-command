@@ -11,8 +11,7 @@ It uses [Laravel Prompts](https://laravel.com/docs/prompts) under the hoods.
 ## Dev Status
 
 * Tested with Laravel 11
-* No automatic command registration for Laravel (no Service Provider include)
-* Execute command not tested
+* Try to add this command as regular command: https://github.com/laravel/framework/pull/51379
 
 ## Install
 
@@ -30,7 +29,7 @@ composer require norman-huth/find-command:"@dev"
 
 #### Laravel
 
-Register the `\NormanHuth\FindCommand\LaravelFindCommand` in Your application.
+Run the command.
 
 ```shell
 php artisan find
@@ -38,7 +37,7 @@ php artisan find
 
 #### Symfony
 
-Register the `\NormanHuth\FindCommand\SymfonyFindCommand` in Your application.
+Register the `\NormanHuth\FindCommand\SymfonyFindCommand` in Your application and run the command.
 
 ```shell
 php bin/console find

@@ -4,6 +4,7 @@ namespace NormanHuth\FindCommand;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Support\Traits\Conditionable;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Descriptor\ApplicationDescription;
 use Symfony\Component\Console\Helper\DescriptorHelper;
@@ -19,215 +20,194 @@ use function Laravel\Prompts\textarea;
 
 trait FindCommandTrait
 {
+    use Conditionable;
+
+    /**
+     * The console command signature.
+     *
+     * @var string
+     */
+    protected $signature = 'find {--deep : Search in the arguments and options descriptions too}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Search console command';
+
     /**
      * The array of available commands.
+     *
+     * @var array
      */
     protected array $commands;
 
     /**
-     * Names of commands wich should except from search.
+     * Execute the console command.
+     *
+     * @return void
      */
-    protected array $exceptFromSearch = [
-        //'list',
-    ];
-
-    /**
-     * Determine the number of options before the list begins to scroll.
-     */
-    protected int $searchScroll = 10;
-
-    /**
-     * Determine if command should Search in the arguments and options descriptions too.
-     */
-    protected bool $deepSearch;
-
-    protected function configure(): void
-    {
-        $this->addOption(
-            'deep',
-            'd',
-            InputOption::VALUE_NONE,
-            'Search in the arguments and options descriptions too'
-        );
-    }
-
-    /**
-     * Execute the command.
-     */
-    public function findCommand(): void
+    public function executeFindCommand(): void
     {
         $description = new ApplicationDescription($this->getApplication());
-        $this->exceptFromSearch[] = $this->getName();
+        $this->commands = Arr::where($description->getCommands(), fn (Command $command) => ! $command instanceof $this);
 
-        $this->commands = collect($description->getCommands())
-            ->filter(fn (Command $command, string $key) => !in_array($key, $this->exceptFromSearch))
-            ->map(function (Command $command) {
-                $definition = $command->getDefinition();
-                $arguments = $definition->getArguments();
-                $options = $definition->getOptions();
-                $deep = '';
-
-                if ($this->deepSearch) {
-                    $deep = implode("\n", (array_merge(
-                        Arr::map($arguments, fn (InputArgument $argument) => $argument->getDescription()),
-                        Arr::map($options, fn (InputOption $option) => $option->getDescription()),
-                    )));
-                }
-
-                return [
-                    'object' => $command,
-                    'name' => $command->getName(),
-                    'arguments' => $arguments,
-                    'options' => $options,
-                    'description' => $command->getDescription(),
-                    'name_description' => windows_os() ? $command->getDescription() :
-                        sprintf('[%s] %s', $command->getName(), $command->getDescription()),
-                    'deep' => $deep,
-                ];
-            })
-            ->toArray();
-
-        $this->determineCommand();
+        $this->searchCommand();
     }
 
-    protected function getActions(): array
-    {
-        $actions = [
-            1 => 'Execute the command',
-            2 => 'Display help for the given command',
-            3 => 'Display help for the given command and search for another command',
-        ];
-
-        if (!$this instanceof \Illuminate\Console\Command) {
-            unset($actions[1]);
-        }
-
-        return $actions;
-    }
-
-    protected function determineCommand(): void
+    /**
+     * Search for a command.
+     *
+     * @return void
+     */
+    protected function searchCommand(): void
     {
         $command = search(
             label: 'Search for command',
             options: fn (string $value) => $this->search($value),
-            scroll: $this->searchScroll,
             required: true
         );
 
-        if ($command == $this->getName()) {
-            $this->determineCommand();
+        if (windows_os() && $command == $this->getName()) {
+            $this->searchCommand();
 
             return;
         }
+
+        (new DescriptorHelper())->describe($this->output, $this->commands[$command]);
+
+        $options = class_uses($this, 'Illuminate\Console\Concerns\CallsCommands') ? ['Execute the command'] : [];
+        $options[] = 'Search for another command';
+        $options[] = 'Exit';
 
         $action = select(
             label: 'Choose a action',
-            options: $this->getActions(),
+            options: $options,
         );
 
-        if ($action == 1) {
-            $this->handleCommand($this->commands[$command]);
+        if ($action == 'Execute the command') {
+            $this->executeFoundCommand($this->commands[$command]);
 
             return;
         }
 
-        (new DescriptorHelper())->describe($this->output, $this->commands[$command]['object']);
-
-        if ($action == 3) {
-            $this->determineCommand();
+        if ($action == 'Search for another command') {
+            $this->searchCommand();
         }
     }
 
-    protected function handleCommand(array $command): void
+    /**
+     * Execute the found command.
+     *
+     * @param  \Symfony\Component\Console\Command\Command  $command
+     */
+    protected function executeFoundCommand(Command $command): void
     {
-        note(sprintf('Execute the „%s“ command', $command['name']));
+        note(sprintf('Execute the „%s“ command', $command->getName()));
         $arguments = [];
+        $definition = $command->getDefinition();
+        $array = array_merge($definition->getArguments(), $definition->getOptions());
 
-        foreach (['arguments', 'options'] as $definition) {
-            foreach ($command[$definition] as $key => $input) {
-                if ($input instanceof InputOption) {
-                    $key = '--' . $key;
+        foreach ($array as $key => $input) {
+            if (in_array($key, ['help', 'quiet', 'ansi', 'version', 'no-interaction', 'verbose'])) {
+                continue;
+            }
 
-                    if (!$input->acceptValue()) {
-                        $arguments[$key] = confirm(
-                            label: $input->getName(),
-                            default: (bool) $input->getDefault(),
-                            required: false,
-                            hint: $input->getDescription(),
-                        );
+            if ($input instanceof InputOption) {
+                $key = '--'.$key;
 
-                        continue;
-                    }
-                }
-
-                /* @var InputArgument|InputOption $input */
-                if (!$input->isArray()) {
-                    $arguments[$key] = textarea(
+                if (! $input->acceptValue()) {
+                    $arguments[$key] = confirm(
                         label: $input->getName(),
-                        placeholder: 'one value in each line',
-                        default: implode(PHP_EOL, array_filter((array) $input->getDefault())),
-                        required: $input instanceof InputArgument && $input->isRequired(),
+                        default: (bool) $input->getDefault(),
+                        required: false,
                         hint: $input->getDescription(),
-                    );
-                    $arguments[$key] = array_filter(
-                        array_map('trim', explode(PHP_EOL, $arguments[$key]))
                     );
 
                     continue;
                 }
+            }
 
-                $arguments[$key] = text(
+            /* @var \Symfony\Component\Console\Input\InputArgument|\Symfony\Component\Console\Input\InputOption $input */
+            if ($input->isArray()) {
+                $arguments[$key] = textarea(
                     label: $input->getName(),
-                    default: (string) $input->getDefault(),
+                    placeholder: 'one value in each line',
+                    default: implode(PHP_EOL, (array) $input->getDefault()),
                     required: $input instanceof InputArgument && $input->isRequired(),
                     hint: $input->getDescription(),
                 );
+                $arguments[$key] = array_filter(
+                    array_map('trim', explode(PHP_EOL, $arguments[$key]))
+                );
+
+                continue;
             }
-        }
 
-        $this->call($command['name'], $arguments);
-    }
-
-    protected function search(string $value): array
-    {
-        if (empty($value)) {
-            return [];
-        }
-
-        /* Result with priority. */
-        $result = array_merge(
-            Arr::where($this->commands, fn (array $command) => $command['name'] == $value),
-            Arr::where($this->commands, fn (array $command) => $this->strContainsAll($command['name'], $value)),
-            Arr::where($this->commands, fn (array $command) => $this->strContainsAll($command['description'], $value)),
-        );
-        if ($this->deepSearch) {
-            $result = array_merge(
-                $result,
-                Arr::where($this->commands, fn (array $command) => $this->strContainsAll($command['deep'], $value))
+            $arguments[$key] = text(
+                label: $input->getName(),
+                default: (string) $input->getDefault(),
+                required: $input instanceof InputArgument && $input->isRequired(),
+                hint: $input->getDescription(),
             );
         }
 
-        if (windows_os()) {
-            $result[] = [
-                'name' => $this->getName(),
-                'name_description' => $this->getDescription(),
-            ];
-        }
+        $arguments = array_filter($arguments, fn ($argument) => $argument !== '');
 
-        return Arr::pluck($result, 'name_description', 'name');
+        $this->call($command->getName(), $arguments);
     }
 
-    protected function strContainsAll(string $haystack, string $search): bool
+    /**
+     * Search for command and return the result prioritized.
+     *
+     * @param  string  $value
+     * @return array
+     */
+    protected function search(string $value): array
     {
-        $haystack = Str::lower($haystack);
-        $search = Str::lower($search);
-
-        foreach (array_filter(explode(' ', $search)) as $needle) {
-            if (!str_contains($haystack, $needle)) {
-                return false;
-            }
+        if (empty(trim($value))) {
+            return [];
         }
 
-        return true;
+        $value = preg_split('/\s+/', $value, flags: PREG_SPLIT_NO_EMPTY);
+
+        $result = array_merge(
+            Arr::where($this->commands, fn (Command $command) => $command->getName() == $value),
+            Arr::where($this->commands, fn (Command $command) => Str::containsAll($command->getName(), $value, true)),
+            Arr::where($this->commands, fn (Command $command) => Str::containsAll($command->getDescription(), $value, true)),
+            $this->when($this->option('deep'), fn () => $this->deepSearchItems($value), fn () => []),
+        );
+
+        $result = Arr::mapWithKeys($result, function (Command $command) {
+            $label = windows_os() ? $command->getDescription() : sprintf('[%s] %s', $command->getName(), $command->getDescription());
+
+            return [$command->getName() => $label];
+        });
+
+        if (windows_os()) {
+            $result[$this->getName()] = $this->getDescription();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get the deep search items.
+     *
+     * @param  array  $value
+     * @return array
+     */
+    protected function deepSearchItems(array $value): array
+    {
+        return Arr::where($this->commands, function (Command $command) use ($value) {
+            $definition = $command->getDefinition();
+            $deep = implode(PHP_EOL, array_merge(
+                Arr::map($definition->getArguments(), fn (InputArgument $argument) => $argument->getDescription()),
+                Arr::map($definition->getOptions(), fn (InputOption $option) => $option->getDescription()),
+            ));
+
+            return Str::containsAll($deep, $value, true);
+        });
     }
 }
