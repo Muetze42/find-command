@@ -1,7 +1,5 @@
 # Find Command
 
-WIP
-
 A 3rd party command for the Frameworks [Symfony](https://symfony.com/) `^6.2|^7.0+` and [Laravel](https://laravel.com) `^10.0|^11.0+`.  
 This command can be used to search for other commands in a Symfony or Laravel application.  
 It uses [Laravel Prompts](https://laravel.com/docs/prompts) under the hoods.
