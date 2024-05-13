@@ -3,8 +3,8 @@
 namespace NormanHuth\FindCommand;
 
 use Composer\InstalledVersions;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Support\ServiceProvider;
 
 class PackageServiceProvider extends ServiceProvider
 {

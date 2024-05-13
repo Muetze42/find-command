@@ -2,16 +2,11 @@
 
 WIP
 
-A 3rd party command for the Frameworks [Symfony](https://symfony.com/) and [Laravel](https://laravel.com).  
+A 3rd party command for the Frameworks [Symfony](https://symfony.com/) `^6.2|^7.0+` and [Laravel](https://laravel.com) `^10.0|^11.0+`.  
 This command can be used to search for other commands in a Symfony or Laravel application.  
 It uses [Laravel Prompts](https://laravel.com/docs/prompts) under the hoods.
 
-![preview](docs/preview.gif)
-
-## Dev Status
-
-* Tested with Laravel 11
-* Try to add this command as regular command: https://github.com/laravel/framework/pull/51379
+![preview](https://raw.githubusercontent.com/Muetze42/find-command/main/docs/preview.gif)
 
 ## Install
 
@@ -49,3 +44,5 @@ php bin/console find
 php artisan find --deep
 php bin/console find --deep
 ```
+
+![preview](https://raw.githubusercontent.com/Muetze42/find-command/main/docs/preview-deep.gif)

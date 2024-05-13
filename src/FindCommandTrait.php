@@ -38,15 +38,11 @@ trait FindCommandTrait
 
     /**
      * The array of available commands.
-     *
-     * @var array
      */
     protected array $commands;
 
     /**
      * Execute the console command.
-     *
-     * @return void
      */
     public function executeFindCommand(): void
     {
@@ -58,8 +54,6 @@ trait FindCommandTrait
 
     /**
      * Search for a command.
-     *
-     * @return void
      */
     protected function searchCommand(): void
     {
@@ -99,8 +93,6 @@ trait FindCommandTrait
 
     /**
      * Execute the found command.
-     *
-     * @param  \Symfony\Component\Console\Command\Command  $command
      */
     protected function executeFoundCommand(Command $command): void
     {
@@ -160,9 +152,6 @@ trait FindCommandTrait
 
     /**
      * Search for command and return the result prioritized.
-     *
-     * @param  string  $value
-     * @return array
      */
     protected function search(string $value): array
     {
@@ -194,9 +183,6 @@ trait FindCommandTrait
 
     /**
      * Get the deep search items.
-     *
-     * @param  array  $value
-     * @return array
      */
     protected function deepSearchItems(array $value): array
     {
