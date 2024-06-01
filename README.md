@@ -12,12 +12,6 @@ It uses [Laravel Prompts](https://laravel.com/docs/prompts) under the hoods.
 composer require norman-huth/find-command
 ```
 
-For development and beta versions:
-
-```shell
-composer require norman-huth/find-command:"@dev"
-```
-
 ### Usage
 
 #### Laravel
@@ -34,6 +28,33 @@ Register the `\NormanHuth\FindCommand\SymfonyFindCommand` in Your application an
 
 ```shell
 php bin/console find
+```
+
+##### Except Commands
+
+Add the method `exceptFromFindCommand` to the command:
+```php
+class MyCommand extends Command
+{
+    /**
+     * Except this command from the find command.
+     */
+    public function exceptFromFindCommand(): bool
+    {
+        return true;
+    }
+```
+
+```php
+class MyCommand extends Command
+{
+    /**
+     * Except this command from the find command.
+     */
+    public function exceptFromFindCommand(): bool
+    {
+        return config('app.env') != 'local';
+    }
 ```
 
 ##### Search in the arguments and options descriptions too

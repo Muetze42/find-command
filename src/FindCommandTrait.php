@@ -47,7 +47,10 @@ trait FindCommandTrait
     public function executeFindCommand(): void
     {
         $description = new ApplicationDescription($this->getApplication());
-        $this->commands = Arr::where($description->getCommands(), fn (Command $command) => ! $command instanceof $this);
+        $this->commands = Arr::where($description->getCommands(), function (Command $command) {
+            return ! $command instanceof $this &&
+                (! method_exists($command, 'exceptFromFindCommand') || ! $command->exceptFromFindCommand());
+        });
 
         $this->searchCommand();
     }
@@ -107,7 +110,7 @@ trait FindCommandTrait
             }
 
             if ($input instanceof InputOption) {
-                $key = '--'.$key;
+                $key = '--' . $key;
 
                 if (! $input->acceptValue()) {
                     $arguments[$key] = confirm(
