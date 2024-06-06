@@ -105,7 +105,7 @@ trait FindCommandTrait
         $array = array_merge($definition->getArguments(), $definition->getOptions());
 
         foreach ($array as $key => $input) {
-            if (in_array($key, ['help', 'quiet', 'ansi', 'version', 'no-interaction', 'verbose'])) {
+            if (in_array($key, ['help', 'quiet', 'ansi', 'version', 'no-interaction', 'verbose', 'env'])) {
                 continue;
             }
 
